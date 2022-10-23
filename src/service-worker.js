@@ -16,6 +16,7 @@ const pagePlugin = {
     // called is if the network request failed, so you don't have to do
     // anything special to confirm that.
 
+    console.log({ cachedResponse });
     const headers = new Headers(cachedResponse.headers);
     headers.set("X-Online", "false");
 
@@ -30,10 +31,6 @@ const pagePlugin = {
 const pageStrategy = new NetworkFirst({
   // Put all cached files in a cache named 'pages'
   cacheName: "pages",
-  matchOptions: {
-    ignoreSearch: true,
-    ignoreVary: true,
-  },
   plugins: [
     // Only requests that return with a 200 status are cached
     new CacheableResponsePlugin({
@@ -45,7 +42,7 @@ const pageStrategy = new NetworkFirst({
 
 // Cache page navigations (HTML) with a Cache First strategy
 registerRoute(({ url }) => url.pathname.startsWith("/users"), pageStrategy);
-
+registerRoute(({ url }) => url.pathname.endsWith("/posts"), pageStrategy);
 
 // Warm the cache when the service worker installs
 self.addEventListener("install", (event) => {
@@ -57,10 +54,11 @@ self.addEventListener("install", (event) => {
 
 // Respond with the fallback if a route throws an error
 setCatchHandler(async (options) => {
+  console.log({ options });
   const destination = options.request.destination;
-  const cache = await self.caches.open("offline-fallbacks");
+  const cache = await self.caches.open("pages");
   if (destination === "document") {
-    return (await cache.match("/offline.html")) || Response.error();
+    return (await cache.match(options.url.pathname)) || Response.error();
   }
   return Response.error();
 });
